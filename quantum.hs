@@ -21,11 +21,6 @@ l = ket 2 [0,1]		-- | 1 >
 p = ket 2 [1,1]		-- | + >
 m = ket 2 [1,-1]	-- | - >
 
-oo = ket 4 [1,0,0,0]
-ol = ket 4 [0,1,0,0]
-lo = ket 4 [0,0,1,0]
-ll = ket 4 [0,0,0,1]
-
 -- bell states
 phip = ket 4 [1,0,0,1]
 phim = ket 4 [1,0,0,-1]
@@ -33,6 +28,7 @@ psip = ket 4 [0,1,1,0]
 psim = ket 4 [0,1,-1,0]
 
 cnot = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0]
+cnot' = multStd $ cnot
 
 tens a b = matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
   where tensorFunc (i,j) = a!((i-1) `quot` (nrows a) + 1, (j-1) `quot` (ncols a) + 1) *
@@ -43,4 +39,24 @@ mult xs = foldr1 multStd xs
 -- showKet x
 --   | 
 
+oo = tens o o
+ol = tens o l
+op = tens o p
+om = tens o m
+lo = tens l o
+ll = tens l l
+lp = tens l p
+lm = tens l m
+po = tens p o
+pl = tens p l
+pp = tens p p
+pm = tens p m
+mo = tens m o
+ml = tens m l
+mp = tens m p
+mm = tens m m
+
 -- factor out constants
+
+
+
