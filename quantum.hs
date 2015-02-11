@@ -3,7 +3,8 @@
 import Data.Matrix
 import Numeric
 
---i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
+i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
+cnot :: Matrix Double -> Matrix Double
 
 print x = putStr $ show x
 
@@ -14,21 +15,39 @@ i = identity 2
 x = fromList 2 2 [0,1,1,0]
 z = fromList 2 2 [1,0,0,-1]
 --h = fromList 2 2 [1,1,1,-1]
-h = fromList 2 2 (map (*(1/(sqrt 2)))[1,1,1,-1])
+h = fromList 2 2 $ map (/sqrt 2) [1,1,1,-1]
 
-o = ket 2 [1,0]		-- | 0 >
-l = ket 2 [0,1]		-- | 1 >
-p = ket 2 [1,1]		-- | + >
-m = ket 2 [1,-1]	-- | - >
+o = ket 2 [1,0]				-- | 0 >
+l = ket 2 [0,1]				-- | 1 >
+p = ket 2 $ map (/sqrt 2) [1,1]		-- | + >
+m = ket 2 $ map (/sqrt 2) [1,-1]	-- | - >
 
 -- bell states
-phip = ket 4 [1,0,0,1]
-phim = ket 4 [1,0,0,-1]
-psip = ket 4 [0,1,1,0]
-psim = ket 4 [0,1,-1,0]
+phip = ket 4 $ map (/sqrt 2) [1,0,0,1]
+phim = ket 4 $ map (/sqrt 2) [1,0,0,-1]
+psip = ket 4 $ map (/sqrt 2) [0,1,1,0]
+psim = ket 4 $ map (/sqrt 2) [0,1,-1,0]
 
-cnot = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0]
-cnot' = multStd $ cnot
+cnot' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0]
+cnot = multStd $ cnot'
+cnot1 = cnot
+cnot12 = cnot1
+
+cnot2' = fromList 4 4 [1,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0]
+cnot2 = multStd cnot2'
+cnot21 = cnot2
+
+swap = cnot12.cnot21.cnot12
+
+cz = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-1]
+
+ch' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1/sqrt 2,1/sqrt 2,0,0,1/sqrt 2, -1/sqrt 2]
+ch = multStd ch'
+
+--ch2' = fromList 4 4 [1,1/sqrt 2,0,0,0,1/sqrt 2,0,0,0,0,1,1/sqrt 2,0,0,0,-1/sqrt 2]
+ch2 = swap.ch.swap
+ch21 = ch2
+--ch = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1,1,0,0,1,-1]
 
 tens a b = matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
   where tensorFunc (i,j) = a!((i-1) `quot` (nrows a) + 1, (j-1) `quot` (ncols a) + 1) *
@@ -39,6 +58,7 @@ mult xs = foldr1 multStd xs
 -- showKet x
 --   | 
 
+ii = tens i i
 oo = tens o o
 ol = tens o l
 op = tens o p
