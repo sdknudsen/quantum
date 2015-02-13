@@ -9,10 +9,16 @@
 -- factor out constants
 
 import Data.Matrix
+import Data.Char
 import Numeric
 
-i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
-cnot,cz :: Matrix Double -> Matrix Double
+-- normFactor = (/sqrt 2)
+-- i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
+-- cnot,cz :: Matrix Double -> Matrix Double
+
+normFactor = (*1)
+i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Int
+cnot,cz,cz13 :: Matrix Int -> Matrix Int
 
 print x = putStr $ show x
 
@@ -25,21 +31,28 @@ x = fromList 2 2 [0,1,1,0]
 z = fromList 2 2 [1,0,0,-1]
 --z = multStd $ z'
 --h = fromList 2 2 [1,1,1,-1]
-h = fromList 2 2 $ map (/sqrt 2) [1,1,1,-1]
+h = fromList 2 2 $ map normFactor [1,1,1,-1]
 
 o = ket 2 [1,0]				-- | 0 >
 l = ket 2 [0,1]				-- | 1 >
-p = ket 2 $ map (/sqrt 2) [1,1]		-- | + >
-m = ket 2 $ map (/sqrt 2) [1,-1]	-- | - >
+p = ket 2 $ map normFactor [1,1]		-- | + >
+m = ket 2 $ map normFactor [1,-1]	-- | - >
 
 -- Bell states
-phip = ket 4 $ map (/sqrt 2) [1,0,0,1]
-phim = ket 4 $ map (/sqrt 2) [1,0,0,-1]
-psip = ket 4 $ map (/sqrt 2) [0,1,1,0]
-psim = ket 4 $ map (/sqrt 2) [0,1,-1,0]
+phip = ket 4 $ map normFactor [1,0,
+                               0,1]
+phim = ket 4 $ map normFactor [1,0,
+                               0,-1]
+psip = ket 4 $ map normFactor [0,1,
+                               1,0]
+psim = ket 4 $ map normFactor [0,1,
+                               -1,0]
 
 -- Gates
-cnot' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0]
+cnot' = fromList 4 4 [1,0,0,0,
+                      0,1,0,0,
+                      0,0,0,1,
+                      0,0,1,0]
 cnot = multStd $ cnot'
 cnot1 = cnot
 cnot12 = cnot1
@@ -53,7 +66,18 @@ swap = cnot12.cnot21.cnot12
 cz' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-1]
 cz = multStd cz'
 
-ch' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1/sqrt 2,1/sqrt 2,0,0,1/sqrt 2, -1/sqrt 2]
+cz13' = fromList 8 8 [1,0,0,0,0,0,0,0,
+                      0,1,0,0,0,0,0,0,
+                      0,0,1,0,0,0,0,0,
+                      0,0,0,1,0,0,0,0,
+                      0,0,0,0,1,0,0,0,
+                      0,0,0,0,0,-1,0,0,
+                      0,0,0,0,0,0,1,0,
+                      0,0,0,0,0,0,0,-1]
+
+cz13 = multStd cz13'
+
+ch' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,normFactor 1,normFactor 1,0,0,normFactor 1, normFactor (-1)]
 ch = multStd ch'
 ch1 = ch
 ch12 = ch1
@@ -108,5 +132,31 @@ ml = k' m l
 mp = k' m p
 mm = k' m m
 
+-- TODO: fix padding, turn where into let ins, add ket bra for matrices
+showKet1 :: Matrix Int -> Int -> String
+showKet1 m n
+  | n == 0 = ""
+  | cst == 0 = showKet1 m (n-1)
+  | abs cst == 1 = showKet1 m (n-1) ++ sign ++ "|" ++ binRep n ++ ">"
+  | otherwise = showKet1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
+  where showCst = show $ abs cst
+        cst = m!(n,1)
+        binRep n = (take diff $ repeat '0') ++ showIntAtBase 2 intToDigit (n-1) ""
+        diff = 0 --(intLog $ ncols m) - (intLog $ n) + 2
+        sign
+          | n == 1 && cst > 0 = ""
+          | n == 1 && cst < 0 = "- "
+          | cst > 0 = " + "
+          | otherwise = " - "
 
+showKet :: Matrix Int -> String
+showKet m
+  | ncols m > 1 = error "Must be a column vector"
+  | otherwise = showKet1 m (nrows m)
+
+-- TODO: tail recursion
+intLog n = intLog1 (n-1)
+intLog1 0 = 1
+intLog1 1 = 1
+intLog1 n = 1 + intLog1 (n `quot` 2)
 
