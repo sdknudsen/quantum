@@ -16,6 +16,19 @@ import Numeric
 -- i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
 -- cnot,cz :: Matrix Double -> Matrix Double
 
+
+ch321' = fromList 8 8 [1,0,0,0,0,0,0,0,
+                       0,1,0,0,0,0,0,0,
+                       0,0,1,0,0,0,0,0,
+                       0,0,0,1,0,0,0,0,
+                       0,0,0,0,1,0,0,0,
+                       0,0,0,0,0,1,0,0,
+                       0,0,0,0,0,0,normFactor 1,normFactor 1,
+                       0,0,0,0,0,0,normFactor 1, normFactor (-1)]
+
+ch321 = multStd ch321'
+
+
 normFactor = (*1)
 i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Int
 cnot,cz,cz13 :: Matrix Int -> Matrix Int
@@ -35,7 +48,7 @@ h = fromList 2 2 $ map normFactor [1,1,1,-1]
 
 o = ket 2 [1,0]				-- | 0 >
 l = ket 2 [0,1]				-- | 1 >
-p = ket 2 $ map normFactor [1,1]		-- | + >
+p = ket 2 $ map normFactor [1,1]	-- | + >
 m = ket 2 $ map normFactor [1,-1]	-- | - >
 
 -- Bell states
@@ -132,7 +145,7 @@ ml = k' m l
 mp = k' m p
 mm = k' m m
 
--- TODO: fix padding, turn where into let ins, add ket bra for matrices
+-- TODO: turn where into let ins, add ket bra for matrices
 showKet1 :: Matrix Int -> Int -> String
 showKet1 m n
   | n == 0 = ""
@@ -141,22 +154,78 @@ showKet1 m n
   | otherwise = showKet1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
   where showCst = show $ abs cst
         cst = m!(n,1)
-        binRep n = (take diff $ repeat '0') ++ showIntAtBase 2 intToDigit (n-1) ""
-        diff = 0 --(intLog $ ncols m) - (intLog $ n) + 2
+        binRep n = (take diff $ repeat '0') ++ toBinary (n-1)
+        diff = length (toBinary (nrows m)) - length (toBinary (n-1)) - 1
+        toBinary i = showIntAtBase 2 intToDigit i ""
         sign
           | n == 1 && cst > 0 = ""
           | n == 1 && cst < 0 = "- "
           | cst > 0 = " + "
           | otherwise = " - "
 
+toBinary i = showIntAtBase 2 intToDigit i ""
 showKet :: Matrix Int -> String
 showKet m
   | ncols m > 1 = error "Must be a column vector"
   | otherwise = showKet1 m (nrows m)
 
--- TODO: tail recursion
-intLog n = intLog1 (n-1)
-intLog1 0 = 1
-intLog1 1 = 1
-intLog1 n = 1 + intLog1 (n `quot` 2)
+-- -- q4
+-- pk1 = ket 9 [1,-1,0,0,0,0,0,0,0]
+-- pk2 = ket 9 [0,0,1,0,0,-1,0,0,0]
+-- pk3 = ket 9 [0,0,0,0,0,0,0,1,-1]
+-- pk4 = ket 9 [0,0,0,1,0,0,-1,0,0]
 
+-- try1 = ket 9 [1,1,1,1,1,1,1,1,1]
+-- try2 = ket 9 [0,0,0,0,1,0,0,0,0]
+-- try3 = ket 9 [1,1,1,1,0,1,1,1,1]
+
+
+
+-- innerProd k1 k2 = multStd (transpose k1) k2
+
+
+-- showDirac :: Matrix Int -> Int -> Char -> String
+-- showDirac m n c
+--   | n == 0 = ""
+--   | cst == 0 = showDirac m (n-1) c
+--   | abs cst == 1 = showDirac m (n-1) c ++ sign ++ lchar ++ binRep n ++ rchar
+--   | otherwise = showDirac m (n-1) c ++ sign ++ showCst ++ lchar ++ binRep n ++ rchar
+--   where showCst = show $ abs cst
+--         cst = m!(n,1)
+--         binRep n = (take diff $ repeat '0') ++ toBinary (n-1)
+--         diff = length (toBinary (nrows m)) - length (toBinary (n-1)) - 1
+--         toBinary i = showIntAtBase 2 intToDigit i ""
+--         sign
+--           | n == 1 && cst > 0 = ""
+--           | n == 1 && cst < 0 = "- "
+--           | cst > 0 = " + "
+--           | otherwise = " - "
+--         lchar
+--           | c == 'k' = "|"
+--           | c == 'b' = "<"
+--           | otherwise = "<"
+--         rchar
+--           | c == 'k' = ">"
+--           | c == 'b' = "|"
+--           | otherwise = "<"
+
+-- toBinary i = showIntAtBase 2 intToDigit i ""
+-- showKet :: Matrix Int -> String
+-- showKet m
+--   | nrows m > 1 && ncols m > 1 = error "Must be a row or column vector"
+--   | nrows m > 1 = showDirac m (nrows m) 'k'
+--   | otherwise = showDirac m (ncols m) 'b'
+
+-- -- -- q4
+-- -- pk1 = ket 9 [1,-1,0,0,0,0,0,0,0]
+-- -- pk2 = ket 9 [0,0,1,0,0,-1,0,0,0]
+-- -- pk3 = ket 9 [0,0,0,0,0,0,0,1,-1]
+-- -- pk4 = ket 9 [0,0,0,1,0,0,-1,0,0]
+
+-- -- try1 = ket 9 [1,1,1,1,1,1,1,1,1]
+-- -- try2 = ket 9 [0,0,0,0,1,0,0,0,0]
+-- -- try3 = ket 9 [1,1,1,1,0,1,1,1,1]
+
+
+
+-- -- innerProd k1 k2 = multStd (transpose k1) k2
