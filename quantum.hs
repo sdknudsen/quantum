@@ -21,25 +21,29 @@ normFactor = (*1)
 o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Int
 i,x,z,h,cnot,cz :: Matrix Int -> Matrix Int
 
-ket x xs = fromList x 1 xs
-bra x xs = fromList 1 x xs
+toKet x xs = fromList x 1 xs
+toBra x xs = fromList 1 x xs
 t = transpose
 
 -- Vectors
-o = ket 2 [1,0]				-- | 0 >
-l = ket 2 [0,1]				-- | 1 >
-p = ket 2 $ map normFactor [1,1]	-- | + >
-m = ket 2 $ map normFactor [1,-1]	-- | - >
+o = toKet 2 [1,0]				-- | 0 >
+l = toKet 2 [0,1]				-- | 1 >
+p = toKet 2 $ map normFactor [1,1]	-- | + >
+m = toKet 2 $ map normFactor [1,-1]	-- | - >
 
 -- Bell states
-phip = ket 4 $ map normFactor [1,0,
+phip = toKet 4 $ map normFactor [1,0,
                                0,1]
-phim = ket 4 $ map normFactor [1,0,
+phim = toKet 4 $ map normFactor [1,0,
                                0,-1]
-psip = ket 4 $ map normFactor [0,1,
+psip = toKet 4 $ map normFactor [0,1,
                                1,0]
-psim = ket 4 $ map normFactor [0,1,
+psim = toKet 4 $ map normFactor [0,1,
                                -1,0]
+
+-- Inner and outer product on 2 kets
+inner k1 k2 = multStd (transpose k1) k2
+outer k1 k2 = multStd k1 (transpose k2)
 
 -- 2 Qubit Gates
 x = multStd $ x'
@@ -124,17 +128,17 @@ ii = k' i' i'
 hh = k' h' h'
 
 -- Display a column vector in ket notation
-showKet :: Matrix Int -> String
-showKet m
+ket :: Matrix Int -> String
+ket m
   | ncols m > 1 = error "Must be a column vector"
-  | otherwise = tail $ showKet1 m (nrows m)
+  | otherwise = tail $ ket1 m (nrows m)
   where
-    showKet1 :: Matrix Int -> Int -> String
-    showKet1 m n
+    ket1 :: Matrix Int -> Int -> String
+    ket1 m n
       | n == 0 = ""
-      | cst == 0 = showKet1 m (n-1)
-      | abs cst == 1 = showKet1 m (n-1) ++ sign ++ "|" ++ binRep n ++ ">"
-      | otherwise = showKet1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
+      | cst == 0 = ket1 m (n-1)
+      | abs cst == 1 = ket1 m (n-1) ++ sign ++ "|" ++ binRep n ++ ">"
+      | otherwise = ket1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
       where showCst = show $ abs cst
             cst = m!(n,1)
             binRep i = (take diff $ repeat '0') ++ toBinary (i-1)
@@ -144,16 +148,13 @@ showKet m
               | cst > 0 = " + "
               | otherwise = " - "
 
-inner k1 k2 = multStd (transpose k1) k2
-outer k1 k2 = multStd k1 (transpose k2)
-
--- ch321' = fromList 8 8 [1,0,0,0,0,0,0,0,
---                        0,1,0,0,0,0,0,0,
---                        0,0,1,0,0,0,0,0,
---                        0,0,0,1,0,0,0,0,
---                        0,0,0,0,1,0,0,0,
---                        0,0,0,0,0,1,0,0,
---                        0,0,0,0,0,0,normFactor 1,normFactor 1,
---                        0,0,0,0,0,0,normFactor 1, normFactor (-1)]
-
--- ch321 = multStd ch321'
+bra :: Matrix Int -> String
+bra m
+  | nrows m > 1 = error "Must be a row vector"
+  | otherwise =
+      let
+        repl '>' = '|'
+        repl '|' = '<'
+        repl c = c
+      in
+       map repl $ ket $ t m
