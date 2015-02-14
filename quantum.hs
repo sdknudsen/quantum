@@ -2,9 +2,7 @@
 -- x' is a matrix, x is a function that applies x'
 
 -- TODO
--- add precedence, maybe with $
 -- improve tensor vector syntax for more than 2 qubits
--- showKet x
 -- change floating point
 -- factor out constants
 
@@ -12,40 +10,22 @@ import Data.Matrix
 import Data.Char
 import Numeric
 
+-- print x = putStr $ show x
+-- mult xs = foldr1 multStd xs
+
 -- normFactor = (/sqrt 2)
 -- i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
 -- cnot,cz :: Matrix Double -> Matrix Double
-
-
-ch321' = fromList 8 8 [1,0,0,0,0,0,0,0,
-                       0,1,0,0,0,0,0,0,
-                       0,0,1,0,0,0,0,0,
-                       0,0,0,1,0,0,0,0,
-                       0,0,0,0,1,0,0,0,
-                       0,0,0,0,0,1,0,0,
-                       0,0,0,0,0,0,normFactor 1,normFactor 1,
-                       0,0,0,0,0,0,normFactor 1, normFactor (-1)]
-
-ch321 = multStd ch321'
-
-
+-- Replace with the lines above to normalize 2 qubit matrices and vectors
 normFactor = (*1)
-i,x,z,h,o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Int
-cnot,cz,cz13 :: Matrix Int -> Matrix Int
-
-print x = putStr $ show x
+o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Int
+i,x,z,h,cnot,cz :: Matrix Int -> Matrix Int
 
 ket x xs = fromList x 1 xs
 bra x xs = fromList 1 x xs
+t = transpose
 
-i = identity 2
-x = fromList 2 2 [0,1,1,0]
---x = multStd $ x'
-z = fromList 2 2 [1,0,0,-1]
---z = multStd $ z'
---h = fromList 2 2 [1,1,1,-1]
-h = fromList 2 2 $ map normFactor [1,1,1,-1]
-
+-- Vectors
 o = ket 2 [1,0]				-- | 0 >
 l = ket 2 [0,1]				-- | 1 >
 p = ket 2 $ map normFactor [1,1]	-- | + >
@@ -61,73 +41,67 @@ psip = ket 4 $ map normFactor [0,1,
 psim = ket 4 $ map normFactor [0,1,
                                -1,0]
 
--- Gates
+-- 2 Qubit Gates
+x = multStd $ x'
+x' = fromList 2 2 [0,1,
+                  1,0]
+z = multStd $ z'
+z' = fromList 2 2 [1,0,
+                  0,-1]
+h = multStd $ h'
+h' = fromList 2 2 $ map normFactor [1,1,1,-1]
+
+i = multStd $ i'
+i' = identity 2
+
+cnot12 = cnot1
+cnot1 = cnot
+cnot = multStd $ cnot'
 cnot' = fromList 4 4 [1,0,0,0,
                       0,1,0,0,
                       0,0,0,1,
                       0,0,1,0]
-cnot = multStd $ cnot'
-cnot1 = cnot
-cnot12 = cnot1
-
-cnot2' = fromList 4 4 [1,0,0,0,0,0,0,1,0,0,1,0,0,1,0,0]
-cnot2 = multStd cnot2'
 cnot21 = cnot2
+cnot2 = multStd cnot2'
+cnot2' = fromList 4 4 [1,0,0,0,
+                       0,0,0,1,
+                       0,0,1,0,
+                       0,1,0,0]
 
 swap = cnot12.cnot21.cnot12
 
-cz' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-1]
 cz = multStd cz'
+cz' = fromList 4 4 [1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    0,0,0,-1]
 
-cz13' = fromList 8 8 [1,0,0,0,0,0,0,0,
-                      0,1,0,0,0,0,0,0,
-                      0,0,1,0,0,0,0,0,
-                      0,0,0,1,0,0,0,0,
-                      0,0,0,0,1,0,0,0,
-                      0,0,0,0,0,-1,0,0,
-                      0,0,0,0,0,0,1,0,
-                      0,0,0,0,0,0,0,-1]
-
-cz13 = multStd cz13'
-
-ch' = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,normFactor 1,normFactor 1,0,0,normFactor 1, normFactor (-1)]
-ch = multStd ch'
-ch1 = ch
 ch12 = ch1
+ch1 = ch
+ch = multStd ch'
+ch' = fromList 4 4 [1,0,0,0,
+                    0,1,0,0,
+                    0,0,normFactor 1,normFactor 1,
+                    0,0,normFactor 1, normFactor (-1)]
 
---ch2' = fromList 4 4 [1,1/sqrt 2,0,0,0,1/sqrt 2,0,0,0,0,1,1/sqrt 2,0,0,0,-1/sqrt 2]
-ch2 = swap.ch.swap
+--ch2 = swap.ch.swap
 ch21 = ch2
---ch = fromList 4 4 [1,0,0,0,0,1,0,0,0,0,1,1,0,0,1,-1]
-
--- k' a b = matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
---   where tensorFunc (i,j) = a!((i-1) `quot` (nrows a) + 1, (j-1) `quot` (ncols a) + 1) *
---                            b!((i-1) `mod` (nrows b) + 1, (j-1) `mod` (ncols b) + 1)
-
--- k' a b = matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
---   where tensorFunc (i,j) = a!(i `quot` (nrows a), j `quot` (ncols a)) *
---                            b!((i-1) `mod` (nrows b) + 1, (j-1) `mod` (ncols b) + 1)
+ch2 = ch2'
+ch2' = fromList 4 4 [1,0,0,0,
+                     0,normFactor 1,0,normFactor 1,
+                     0,0,1,0,
+                     0,normFactor 1,0,normFactor (-1)]
 
 
-k' a b = matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
-  where tensorFunc (i,j) = a!(((i-1) `quot` (nrows b))+1, ((j-1) `quot` (ncols b))+1) *
-                           b!((i-1) `mod` (nrows b) + 1, (j-1) `mod` (ncols b) + 1)
-                           -- b!((i `mod` (nrows a)) + 1, (j `mod` (ncols a)) + 1)
-        
-        
---  where tensorFunc (i,j) = a!((i `quot` (nrows b))+1, (j `quot` (ncols b))+1)
--- *b!((i `mod` (nrows a)-1)+1, (j `mod` (ncols a)-1)+1)
-
-
-
-
-
--- Kronecker
+-- Kronecker products are considered functions here, so they are 'hungry'
 k a b = multStd $ k' a b
 
-mult xs = foldr1 multStd xs
+-- The matrix or vector equivalent is k'
+k' a b = matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
+  where tensorFunc (i,j) = a!(((i-1) `quot` (nrows b)) + 1, ((j-1) `quot` (ncols b)) + 1) *
+                           b!((i-1) `mod` (nrows b) + 1, (j-1) `mod` (ncols b) + 1)
 
-ii = k' i i
+-- Common 2 qubit vectors
 oo = k' o o
 ol = k' o l
 op = k' o p
@@ -145,87 +119,41 @@ ml = k' m l
 mp = k' m p
 mm = k' m m
 
--- TODO: turn where into let ins, add ket bra for matrices
-showKet1 :: Matrix Int -> Int -> String
-showKet1 m n
-  | n == 0 = ""
-  | cst == 0 = showKet1 m (n-1)
-  | abs cst == 1 = showKet1 m (n-1) ++ sign ++ "|" ++ binRep n ++ ">"
-  | otherwise = showKet1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
-  where showCst = show $ abs cst
-        cst = m!(n,1)
-        binRep n = (take diff $ repeat '0') ++ toBinary (n-1)
-        diff = length (toBinary (nrows m)) - length (toBinary (n-1)) - 1
-        toBinary i = showIntAtBase 2 intToDigit i ""
-        sign
-          | n == 1 && cst > 0 = ""
-          | n == 1 && cst < 0 = "- "
-          | cst > 0 = " + "
-          | otherwise = " - "
+-- Basis state matrices
+ii = k' i' i'
+hh = k' h' h'
 
-toBinary i = showIntAtBase 2 intToDigit i ""
+-- Display a column vector in ket notation
 showKet :: Matrix Int -> String
 showKet m
   | ncols m > 1 = error "Must be a column vector"
-  | otherwise = showKet1 m (nrows m)
+  | otherwise = tail $ showKet1 m (nrows m)
+  where
+    showKet1 :: Matrix Int -> Int -> String
+    showKet1 m n
+      | n == 0 = ""
+      | cst == 0 = showKet1 m (n-1)
+      | abs cst == 1 = showKet1 m (n-1) ++ sign ++ "|" ++ binRep n ++ ">"
+      | otherwise = showKet1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
+      where showCst = show $ abs cst
+            cst = m!(n,1)
+            binRep i = (take diff $ repeat '0') ++ toBinary (i-1)
+            toBinary i = showIntAtBase 2 intToDigit i ""
+            diff = length (toBinary (nrows m)) - length (toBinary (n-1)) - 1
+            sign
+              | cst > 0 = " + "
+              | otherwise = " - "
 
--- -- q4
--- pk1 = ket 9 [1,-1,0,0,0,0,0,0,0]
--- pk2 = ket 9 [0,0,1,0,0,-1,0,0,0]
--- pk3 = ket 9 [0,0,0,0,0,0,0,1,-1]
--- pk4 = ket 9 [0,0,0,1,0,0,-1,0,0]
+inner k1 k2 = multStd (transpose k1) k2
+outer k1 k2 = multStd k1 (transpose k2)
 
--- try1 = ket 9 [1,1,1,1,1,1,1,1,1]
--- try2 = ket 9 [0,0,0,0,1,0,0,0,0]
--- try3 = ket 9 [1,1,1,1,0,1,1,1,1]
+-- ch321' = fromList 8 8 [1,0,0,0,0,0,0,0,
+--                        0,1,0,0,0,0,0,0,
+--                        0,0,1,0,0,0,0,0,
+--                        0,0,0,1,0,0,0,0,
+--                        0,0,0,0,1,0,0,0,
+--                        0,0,0,0,0,1,0,0,
+--                        0,0,0,0,0,0,normFactor 1,normFactor 1,
+--                        0,0,0,0,0,0,normFactor 1, normFactor (-1)]
 
-
-
--- innerProd k1 k2 = multStd (transpose k1) k2
-
-
--- showDirac :: Matrix Int -> Int -> Char -> String
--- showDirac m n c
---   | n == 0 = ""
---   | cst == 0 = showDirac m (n-1) c
---   | abs cst == 1 = showDirac m (n-1) c ++ sign ++ lchar ++ binRep n ++ rchar
---   | otherwise = showDirac m (n-1) c ++ sign ++ showCst ++ lchar ++ binRep n ++ rchar
---   where showCst = show $ abs cst
---         cst = m!(n,1)
---         binRep n = (take diff $ repeat '0') ++ toBinary (n-1)
---         diff = length (toBinary (nrows m)) - length (toBinary (n-1)) - 1
---         toBinary i = showIntAtBase 2 intToDigit i ""
---         sign
---           | n == 1 && cst > 0 = ""
---           | n == 1 && cst < 0 = "- "
---           | cst > 0 = " + "
---           | otherwise = " - "
---         lchar
---           | c == 'k' = "|"
---           | c == 'b' = "<"
---           | otherwise = "<"
---         rchar
---           | c == 'k' = ">"
---           | c == 'b' = "|"
---           | otherwise = "<"
-
--- toBinary i = showIntAtBase 2 intToDigit i ""
--- showKet :: Matrix Int -> String
--- showKet m
---   | nrows m > 1 && ncols m > 1 = error "Must be a row or column vector"
---   | nrows m > 1 = showDirac m (nrows m) 'k'
---   | otherwise = showDirac m (ncols m) 'b'
-
--- -- -- q4
--- -- pk1 = ket 9 [1,-1,0,0,0,0,0,0,0]
--- -- pk2 = ket 9 [0,0,1,0,0,-1,0,0,0]
--- -- pk3 = ket 9 [0,0,0,0,0,0,0,1,-1]
--- -- pk4 = ket 9 [0,0,0,1,0,0,-1,0,0]
-
--- -- try1 = ket 9 [1,1,1,1,1,1,1,1,1]
--- -- try2 = ket 9 [0,0,0,0,1,0,0,0,0]
--- -- try3 = ket 9 [1,1,1,1,0,1,1,1,1]
-
-
-
--- -- innerProd k1 k2 = multStd (transpose k1) k2
+-- ch321 = multStd ch321'
