@@ -1,50 +1,45 @@
 -- Author: Stefan Knudsen
--- Description: Matrix multiplication with added features for quantum gates, targeted for 2 qubits
+-- Description: Matrix multiplication for quantum circuits
 
--- https://hackage.haskell.org/package/matrix-0.2.1/docs/Data-Matrix.html
 -- x' is a matrix, x is a function that applies x'
 
 -- TODO
--- improve tensor vector syntax for more than 2 qubits
 -- change floating point
--- factor out constants
+-- display vectors with constants factored out
 
 import Data.Matrix
 import Data.Bits
 import Data.Char
 import Numeric
 
+o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Num a => Matrix a
+i,x,z,h,cnot,cz :: Num a => Matrix a -> Matrix a
+i',x',z',h',cz',cnot' :: Num a => Matrix a
+
 -- print x = putStr $ show x
 -- mult xs = foldr1 multStd xs
 
--- normFactor = (/sqrt 2)
--- o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Double
--- i,x,z,h,cnot,cz :: Matrix Double -> Matrix Double
--- c :: Matrix Double -> Int -> Int -> Matrix Double
--- Replace with the lines above to normalize 2 qubit matrices and vectors
+normFactor :: Num a => a -> a
 normFactor = (*1)
-o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Matrix Int
-i,x,z,h,cnot,cz :: Matrix Int -> Matrix Int
+-- Replace with the line below to normalize 2 qubit matrices and vectors
+-- normFactor = (/sqrt 2)
 
+--toKet : Matrix a -> Int -> Matrix a -> Matrix a
 toKet x xs = fromList x 1 xs
 toBra x xs = fromList 1 x xs
 t = transpose
 
 -- Vectors
-o = toKet 2 [1,0]			-- | 0 >
-l = toKet 2 [0,1]			-- | 1 >
-p = toKet 2 $ map normFactor [1,1]	-- | + >
-m = toKet 2 $ map normFactor [1,-1]	-- | - >
+o = toKet 2 [1,0]			-- |0>
+l = toKet 2 [0,1]			-- |1>
+p = toKet 2 $ map normFactor [1,1]	-- |+>
+m = toKet 2 $ map normFactor [1,-1]	-- |->
 
 -- Bell states
-phip = toKet 4 $ map normFactor [1,0,
-                               0,1]
-phim = toKet 4 $ map normFactor [1,0,
-                               0,-1]
-psip = toKet 4 $ map normFactor [0,1,
-                               1,0]
-psim = toKet 4 $ map normFactor [0,1,
-                               -1,0]
+phip = toKet 4 $ map normFactor [1,0,0,1]
+phim = toKet 4 $ map normFactor [1,0,0,-1]
+psip = toKet 4 $ map normFactor [0,1,1,0]
+psim = toKet 4 $ map normFactor [0,1,-1,0]
 
 -- Inner and outer product on 2 kets
 inner k1 k2 = multStd (transpose k1) k2
@@ -71,21 +66,12 @@ cnot' = fromList 4 4 [1,0,0,0,
                       0,0,0,1,
                       0,0,1,0]
 
--- cnot' = fromList 4 4 [1,0,0,0,
---                       0,1,0,0,
---                       0,0,3,4,
---                       0,0,4,3]
-
 cnot21 = cnot2
 cnot2 = multStd cnot2'
 cnot2' = fromList 4 4 [1,0,0,0,
                        0,0,0,1,
                        0,0,1,0,
                        0,1,0,0]
--- cnot2' = fromList 4 4 [1,0,0,0,
---                        0,0,0,4,
---                        0,0,1,0,
---                        0,4,0,0]
 
 swap = cnot12.cnot21.cnot12
 
@@ -112,13 +98,14 @@ ch2' = fromList 4 4 [1,	0,		0,	0,
                      0,	normFactor 1,	0,	normFactor (-1)]
 
 
--- Kronecker products are considered functions here, so they're 'hungry'
+-- k is a functions that tries to multiply by whatever it to its right
 k a b = multStd $ k' a b
 
 -- The matrix or vector equivalent is k'
+k' :: Num a => Matrix a -> Matrix a -> Matrix a
 k' a b =
-  let tensorFunc (i,j) = a!(((i-1) `quot` (nrows b)) + 1, ((j-1) `quot` (ncols b)) + 1) *
-                     b!((i-1) `mod` (nrows b) + 1, (j-1) `mod` (ncols b) + 1)
+  let tensorFunc (i,j) = a!((i-1) `quot` (nrows b) + 1, (j-1) `quot` (ncols b) + 1) *
+                         b!((i-1) `mod` (nrows b) + 1, (j-1) `mod` (ncols b) + 1)
   in
    matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
 
@@ -126,23 +113,31 @@ k' a b =
 -- Control gate for more than 2 qubits
 -- Takes matrix to apply, control bit, and output bit
 -- TODO: allow for more than one control and one controlled bit
-c :: Matrix Int -> Int -> Int -> Int -> Matrix Int
-c g n x y = matrix (2^n) (2^n) (control g n (n - x) y) -- x\ ((max x y) - x + 1)
+c :: Num a => Matrix a -> Int -> Int -> Int -> Matrix a
+c g n x y = matrix (2^n) (2^n) (control g n (n - x) y)
   where
-    control :: Matrix Int -> Int -> Int -> Int -> (Int,Int) -> Int
+    -- if the control bit is on, make and identity matrix, otherwise treat it as a tensor product of with gate g at the y bit
+    control :: Num a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
     control g n x y (i,j)
       | not (bitIsOne x i j) && i == j = 1
       | not (bitIsOne x i j) = 0
-      | otherwise = kList g n y!(i,j)
+      | otherwise = (putGate g n y)!(i,j)
       where
+        -- checks if the control bit is on
         bitIsOne :: Int -> Int -> Int -> Bool
         bitIsOne c i j = ((i-1) .&. (j-1) .&. 2^c) /= 0
-        kList g' n v
-          | n < 1 = error "Second argument must be at least 1"
-          | v == 1 && n == 1 = g'
-          | n == 1 && n /= v = i'
-          | n /= v = k' (kList g' (n-1) v) i'
-          | otherwise = k' (kList g' (n-1) v) g'
+
+-- Tensor product for arbitrarily many i's and 1 g' gate at the bit postion
+-- change to tail recursive?
+putGate :: Num a => Matrix a -> Int -> Int -> Matrix a
+putGate g' n bit
+  | n < 1 = error "Second argument must be at least 1"
+  | n == 1 = newGate
+  | otherwise = k' (putGate g' (n-1) bit) newGate
+      where
+        newGate
+          | bit /= n = i'
+          | otherwise = g'
 
 -- Common 2 qubit vectors
 oo = k' o o
@@ -167,27 +162,29 @@ ii = k' i' i'
 hh = k' h' h'
 
 -- Display a column vector in ket notation
-ket :: Matrix Int -> String
+ket :: (Show a, Ord a, Num a) => Matrix a -> String
 ket m
   | ncols m > 1 = error "Must be a column vector"
   | otherwise = tail $ ket1 m (nrows m)
   where
-    ket1 :: Matrix Int -> Int -> String
     ket1 m n
       | n == 0 = ""
+    -- don't show the term if the constant is 0
       | cst == 0 = ket1 m (n-1)
+    -- don't show the constant if it's 1 or -1
       | abs cst == 1 = ket1 m (n-1) ++ sign ++ "|" ++ binRep n ++ ">"
       | otherwise = ket1 m (n-1) ++ sign ++ showCst ++ "|" ++ binRep n ++ ">"
-      where showCst = show $ abs cst
+      where showCst = show $ abs $ cst
             cst = m!(n,1)
             binRep i = (take diff $ repeat '0') ++ toBinary (i-1)
             toBinary i = showIntAtBase 2 intToDigit i ""
+            -- allows for padding
             diff = length (toBinary (nrows m)) - length (toBinary (n-1)) - 1
             sign
               | cst > 0 = " + "
               | otherwise = " - "
 
-bra :: Matrix Int -> String
+bra :: (Show a, Ord a, Num a) => Matrix a -> String
 bra m
   | nrows m > 1 = error "Must be a row vector"
   | otherwise =
