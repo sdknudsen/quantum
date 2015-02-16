@@ -6,6 +6,7 @@
 -- TODO
 -- change floating point
 -- display vectors with constants factored out
+-- split into multiple files
 
 import Data.Matrix
 import Data.Bits
@@ -24,7 +25,7 @@ normFactor = (*1)
 -- Replace with the line below to normalize 2 qubit matrices and vectors
 -- normFactor = (/sqrt 2)
 
---toKet : Matrix a -> Int -> Matrix a -> Matrix a
+toKet :: Int -> [a] -> Matrix a
 toKet x xs = fromList x 1 xs
 toBra x xs = fromList 1 x xs
 t = transpose
@@ -65,14 +66,12 @@ cnot' = fromList 4 4 [1,0,0,0,
                       0,1,0,0,
                       0,0,0,1,
                       0,0,1,0]
-
 cnot21 = cnot2
 cnot2 = multStd cnot2'
 cnot2' = fromList 4 4 [1,0,0,0,
                        0,0,0,1,
                        0,0,1,0,
                        0,1,0,0]
-
 swap = cnot12.cnot21.cnot12
 
 cz = multStd cz'
@@ -80,7 +79,6 @@ cz' = fromList 4 4 [1,0,0,0,
                     0,1,0,0,
                     0,0,1,0,
                     0,0,0,-1]
-
 ch12 = ch1
 ch1 = ch
 ch = multStd ch'
@@ -98,6 +96,29 @@ ch2' = fromList 4 4 [1,	0,		0,	0,
                      0,	normFactor 1,	0,	normFactor (-1)]
 
 
+-- Common 2 qubit vectors
+oo = k' o o
+ol = k' o l
+op = k' o p
+om = k' o m
+lo = k' l o
+ll = k' l l
+lp = k' l p
+lm = k' l m
+po = k' p o
+pl = k' p l
+pp = k' p p
+pm = k' p m
+mo = k' m o
+ml = k' m l
+mp = k' m p
+mm = k' m m
+
+-- Basis state matrices
+ii = k' i' i'
+hh = k' h' h'
+
+---------------- Matrix functions ----------------
 -- k is a functions that tries to multiply by whatever it to its right
 k a b = multStd $ k' a b
 
@@ -155,27 +176,6 @@ putGate g' n c
           | c /= n = i'
           | otherwise = g'
 
--- Common 2 qubit vectors
-oo = k' o o
-ol = k' o l
-op = k' o p
-om = k' o m
-lo = k' l o
-ll = k' l l
-lp = k' l p
-lm = k' l m
-po = k' p o
-pl = k' p l
-pp = k' p p
-pm = k' p m
-mo = k' m o
-ml = k' m l
-mp = k' m p
-mm = k' m m
-
--- Basis state matrices
-ii = k' i' i'
-hh = k' h' h'
 
 -- Display a column vector in ket notation
 ket :: (Show a, Ord a, Num a) => Matrix a -> String
