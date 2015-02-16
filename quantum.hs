@@ -1,7 +1,7 @@
 -- Author: Stefan Knudsen
 -- Description: Matrix multiplication for quantum circuits
 
--- x' is a matrix, x is a function that applies x'
+-- m' is a matrix, m is a function that applies m'
 
 -- TODO
 -- change floating point
@@ -109,34 +109,50 @@ k' a b =
   in
    matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
 
-
 -- Control gate for more than 2 qubits
 -- Takes matrix to apply, control bit, and output bit
--- TODO: allow for more than one control and one controlled bit
 c :: Num a => Matrix a -> Int -> Int -> Int -> Matrix a
-c g n x y = matrix (2^n) (2^n) (control g n (n - x) y)
+c g' n x y = matrix (2^n) (2^n) (control g' n (n - x) y)
   where
-    -- if the control bit is on, make and identity matrix, otherwise treat it as a tensor product of with gate g at the y bit
+    -- If the control bit is on, make and identity matrix, otherwise treat it as a tensor product of with gate g at the y bit
+    -- Takes a coordinate pairs and returns the matrix value at that coordinate
     control :: Num a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
-    control g n x y (i,j)
+    control g' n x y (i,j)
       | not (bitIsOne x i j) && i == j = 1
       | not (bitIsOne x i j) = 0
-      | otherwise = (putGate g n y)!(i,j)
+      | otherwise = (putGate g' n y)!(i,j)
       where
         -- checks if the control bit is on
         bitIsOne :: Int -> Int -> Int -> Bool
         bitIsOne c i j = ((i-1) .&. (j-1) .&. 2^c) /= 0
 
--- Tensor product for arbitrarily many i's and 1 g' gate at the bit postion
+
+-- TODO: turn cs and c into one function through typeclassing
+-- Control gate for more than 2 qubits with multiple control bits
+cs :: Num a => Matrix a -> Int -> [Int] -> Int -> Matrix a
+cs g' n xs y = matrix (2^n) (2^n) (control g' n xs y)
+  where
+    -- If all control bits are on, make and identity matrix, otherwise treat it as a tensor product of with gate g' at the y bit
+    control g' n xs y (i,j)
+      | not (bitsAnded xs i j) && i == j = 1
+      | not (bitsAnded xs i j) = 0
+      | otherwise = (putGate g' n y)!(i,j)
+      where
+        -- Checks if all control bits are on
+--        bitsAnded :: (Bits a, Num a) => [Int] -> a -> a -> Bool
+        bitsAnded xs i j =
+          foldr (\x acc -> acc && (((i-1) .&. (j-1) .&. 2^(n-x)) /= 0)) True xs
+
+-- Tensor product for n bits with a gate g' at position c (identity elsewhere)
 -- change to tail recursive?
 putGate :: Num a => Matrix a -> Int -> Int -> Matrix a
-putGate g' n bit
+putGate g' n c
   | n < 1 = error "Second argument must be at least 1"
   | n == 1 = newGate
-  | otherwise = k' (putGate g' (n-1) bit) newGate
+  | otherwise = k' (putGate g' (n-1) c) newGate
       where
         newGate
-          | bit /= n = i'
+          | c /= n = i'
           | otherwise = g'
 
 -- Common 2 qubit vectors
