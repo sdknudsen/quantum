@@ -228,37 +228,52 @@ bra m
       in
        map repl $ ket $ t m
 
---f :: RealFloat a => Int -> Matrix (Complex a)
+f :: RealFloat a => Int -> Matrix (Complex a)
 -- Creates the n-dimensional Fourier matrix
 -- F_{jk} = e^{2*pi*i*j*k/n}, where j,k start at 0
---f n = matrix n n (\(j,k) -> exp (fromIntegral (2*(j-1)*(k-1)) * pi * (0:+1)/fromIntegral n))
+f n = matrix n n (\(j,k) -> exp (fromIntegral (2*(j-1)*(k-1)) * pi * (0:+1)/fromIntegral n))
 -- to normalize: (/sqrt n) $ 
 
--- from a3q3
--- permR = multStd $ permR'
--- permR' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
---                        0:+0,0:+0,0:+0,0:+0,1:+0,0:+0,
---                        0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
---                        0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
---                        0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
---                        0:+0,0:+0,0:+0,0:+0,0:+0,1:+0]
+-- cuts off rounding error (only for 0)
+clean :: Matrix (Complex Double) -> Matrix (Complex Double)
+clean m =
+  let
+    errorToZero :: Complex Double -> Complex Double
+    errorToZero (a:+b)
+      | (abs a <= 1.0e-10) && (abs b <= 1.0e-10) = 0:+0
+      | abs b <= 1.0e-10 = a:+0.0
+      | abs a <= 1.0e-10 = 0.0:+b
+      | otherwise = a:+b
+  in
+  matrix (nrows m) (ncols m) (\(i,j) -> errorToZero (m!(i,j)))
 
--- miniPerm = multStd $ miniPerm'
--- miniPerm' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
---                           0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
---                           0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
---                           0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
---                           0:+0,0:+0,0:+0,0:+0,0:+0,1:+0,
---                           0:+0,0:+0,0:+0,0:+0,1:+0,0:+0]
+--from a3q3
+-- this can be done with permMatrix n i j
+perm = multStd $ perm'
+perm' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
+                       0:+0,0:+0,0:+0,0:+0,1:+0,0:+0,
+                       0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
+                       0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
+                       0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
+                       0:+0,0:+0,0:+0,0:+0,0:+0,1:+0]
+-- same thing
+permu' = permMatrix 6 2 5
 
---a = permR $ k (f 2) (f 3) $ permR'
--- let a = permR $ k (f 2) (f 3) $ miniPerm $ permR'
+miniPerm = multStd $ miniPerm'
+miniPerm' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
+                          0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
+                          0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
+                          0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
+                          0:+0,0:+0,0:+0,0:+0,0:+0,1:+0,
+                          0:+0,0:+0,0:+0,0:+0,1:+0,0:+0]
+
+--a = perm $ k (f 2) (f 3) $ perm'
+-- let a = perm $ k (f 2) (f 3) $ miniPerm $ perm'
 --         a - (f 6)
 
 
-q3p = multStd $ miniPerm $ permR'
-
-q3q = multStd $ permR'
+q3p = miniPerm $ perm'
+q3q = perm'
 
 -- P =
 -- ( 1 0 0 0 0 0 )
@@ -277,25 +292,25 @@ q3q = multStd $ permR'
 -- ( 0 1 0 0 0 0 )
 
 -- base 6 vectors
-s0 = toKet 6 [1,0,0,0,0,0]
-s1 = toKet 6 [0,1,0,0,0,0]
-s2 = toKet 6 [0,0,1,0,0,0]
-s3 = toKet 6 [0,0,0,1,0,0]
-s4 = toKet 6 [0,0,0,0,1,0]
-s5 = toKet 6 [0,0,0,0,0,1]
+-- s0 = toKet 6 [1,0,0,0,0,0]
+-- s1 = toKet 6 [0,1,0,0,0,0]
+-- s2 = toKet 6 [0,0,1,0,0,0]
+-- s3 = toKet 6 [0,0,0,1,0,0]
+-- s4 = toKet 6 [0,0,0,0,1,0]
+-- s5 = toKet 6 [0,0,0,0,0,1]
 
-permR = multStd $ permR'
-permR' = fromList 6 6 [1,0,0,0,0,0,
-                       0,0,0,0,1,0,
-                       0,0,1,0,0,0,
-                       0,0,0,1,0,0,
-                       0,1,0,0,0,0,
-                       0,0,0,0,0,1]
+-- perm = multStd $ perm'
+-- perm' = fromList 6 6 [1,0,0,0,0,0,
+--                        0,0,0,0,1,0,
+--                        0,0,1,0,0,0,
+--                        0,0,0,1,0,0,
+--                        0,1,0,0,0,0,
+--                        0,0,0,0,0,1]
 
-miniPerm = multStd $ miniPerm'
-miniPerm' = fromList 6 6 [1,0,0,0,0,0,
-                          0,0,1,0,0,0,
-                          0,1,0,0,0,0,
-                          0,0,0,1,0,0,
-                          0,0,0,0,0,1,
-                          0,0,0,0,1,0]
+-- miniPerm = multStd $ miniPerm'
+-- miniPerm' = fromList 6 6 [1,0,0,0,0,0,
+--                           0,0,1,0,0,0,
+--                           0,1,0,0,0,0,
+--                           0,0,0,1,0,0,
+--                           0,0,0,0,0,1,
+--                           0,0,0,0,1,0]
