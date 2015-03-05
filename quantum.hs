@@ -11,11 +11,15 @@
 import Data.Matrix
 import Data.Bits
 import Data.Char
+import Data.Complex
 import Numeric
 
 o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Num a => Matrix a
 i,x,z,h,cnot,cz :: Num a => Matrix a -> Matrix a
 i',x',z',h',cz',cnot' :: Num a => Matrix a
+-- o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: RealFloat a => Matrix a
+-- i,x,z,h,cnot,cz :: RealFloat a => Matrix a -> Matrix a
+-- i',x',z',h',cz',cnot' :: RealFloat a => Matrix a
 
 -- print x = putStr $ show x
 -- mult xs = foldr1 multStd xs
@@ -23,6 +27,7 @@ i',x',z',h',cz',cnot' :: Num a => Matrix a
 normFactor :: Num a => a -> a
 normFactor = (*1)
 -- Replace with the line below to normalize 2 qubit matrices and vectors
+-- normFactor :: (RealFloat a) => a -> a
 -- normFactor = (/sqrt 2)
 
 toKet :: Int -> [a] -> Matrix a
@@ -130,13 +135,24 @@ k' a b =
   in
    matrix ((nrows a)*(nrows b)) ((ncols a)*(ncols b)) tensorFunc
 
+
+-- class (Num a) => Control a b where
+--   c :: Matrix a -> Int -> b -> Int -> Matrix a
+
+-- instance Control Int where
+--   c :: Matrix a -> Int -> Int -> Int -> Matrix a
+
+-- instance Control [Int] where
+--   c :: Matrix a -> Int -> [Int] -> Int -> Matrix a
+
 -- Control gate for more than 2 qubits
 -- Takes matrix to apply, control bit, and output bit
-c :: Num a => Matrix a -> Int -> Int -> Int -> Matrix a
+--c :: Num a => Matrix a -> Int -> Int -> Int -> Matrix a
 c g' n x y = matrix (2^n) (2^n) (control g' n (n - x) y)
   where
-    -- If the control bit is on, make and identity matrix, otherwise treat it as a tensor product of with gate g at the y bit
+    -- If the control bit is on, get the entry for an identity matrix, otherwise treat it as a tensor product of with gate g at the y bit
     -- Takes a coordinate pairs and returns the matrix value at that coordinate
+    --control :: RealFloat a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
     control :: Num a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
     control g' n x y (i,j)
       | not (bitIsOne x i j) && i == j = 1
@@ -150,7 +166,7 @@ c g' n x y = matrix (2^n) (2^n) (control g' n (n - x) y)
 
 -- TODO: turn cs and c into one function through typeclassing
 -- Control gate for more than 2 qubits with multiple control bits
-cs :: Num a => Matrix a -> Int -> [Int] -> Int -> Matrix a
+--cs :: Num a => Matrix a -> Int -> [Int] -> Int -> Matrix a
 cs g' n xs y = matrix (2^n) (2^n) (control g' n xs y)
   where
     -- If all control bits are on, make and identity matrix, otherwise treat it as a tensor product of with gate g' at the y bit
@@ -166,6 +182,7 @@ cs g' n xs y = matrix (2^n) (2^n) (control g' n xs y)
 
 -- Tensor product for n bits with a gate g' at position c (identity elsewhere)
 -- change to tail recursive?
+--putGate :: RealFloat a => Matrix a -> Int -> Int -> Matrix a
 putGate :: Num a => Matrix a -> Int -> Int -> Matrix a
 putGate g' n c
   | n < 1 = error "Second argument must be at least 1"
@@ -210,3 +227,75 @@ bra m
         repl c = c
       in
        map repl $ ket $ t m
+
+--f :: RealFloat a => Int -> Matrix (Complex a)
+-- Creates the n-dimensional Fourier matrix
+-- F_{jk} = e^{2*pi*i*j*k/n}, where j,k start at 0
+--f n = matrix n n (\(j,k) -> exp (fromIntegral (2*(j-1)*(k-1)) * pi * (0:+1)/fromIntegral n))
+-- to normalize: (/sqrt n) $ 
+
+-- from a3q3
+-- permR = multStd $ permR'
+-- permR' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
+--                        0:+0,0:+0,0:+0,0:+0,1:+0,0:+0,
+--                        0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
+--                        0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
+--                        0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
+--                        0:+0,0:+0,0:+0,0:+0,0:+0,1:+0]
+
+-- miniPerm = multStd $ miniPerm'
+-- miniPerm' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
+--                           0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
+--                           0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
+--                           0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
+--                           0:+0,0:+0,0:+0,0:+0,0:+0,1:+0,
+--                           0:+0,0:+0,0:+0,0:+0,1:+0,0:+0]
+
+--a = permR $ k (f 2) (f 3) $ permR'
+-- let a = permR $ k (f 2) (f 3) $ miniPerm $ permR'
+--         a - (f 6)
+
+
+q3p = multStd $ miniPerm $ permR'
+
+q3q = multStd $ permR'
+
+-- P =
+-- ( 1 0 0 0 0 0 )
+-- ( 0 0 0 0 1 0 )
+-- ( 0 0 1 0 0 0 )
+-- ( 0 0 0 1 0 0 )
+-- ( 0 1 0 0 0 0 )
+-- ( 0 0 0 0 0 1 )
+
+-- Q =
+-- ( 1 0 0 0 0 0 )
+-- ( 0 0 1 0 0 0 )
+-- ( 0 0 0 0 1 0 )
+-- ( 0 0 0 1 0 0 )
+-- ( 0 0 0 0 0 1 )
+-- ( 0 1 0 0 0 0 )
+
+-- base 6 vectors
+s0 = toKet 6 [1,0,0,0,0,0]
+s1 = toKet 6 [0,1,0,0,0,0]
+s2 = toKet 6 [0,0,1,0,0,0]
+s3 = toKet 6 [0,0,0,1,0,0]
+s4 = toKet 6 [0,0,0,0,1,0]
+s5 = toKet 6 [0,0,0,0,0,1]
+
+permR = multStd $ permR'
+permR' = fromList 6 6 [1,0,0,0,0,0,
+                       0,0,0,0,1,0,
+                       0,0,1,0,0,0,
+                       0,0,0,1,0,0,
+                       0,1,0,0,0,0,
+                       0,0,0,0,0,1]
+
+miniPerm = multStd $ miniPerm'
+miniPerm' = fromList 6 6 [1,0,0,0,0,0,
+                          0,0,1,0,0,0,
+                          0,1,0,0,0,0,
+                          0,0,0,1,0,0,
+                          0,0,0,0,0,1,
+                          0,0,0,0,1,0]
