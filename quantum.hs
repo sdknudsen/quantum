@@ -13,6 +13,7 @@ import Data.Bits
 import Data.Char
 import Data.Complex
 import Numeric
+import qualified Test.QuickCheck as T
 
 o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Num a => Matrix a
 i,x,z,h,cnot,cz :: Num a => Matrix a -> Matrix a
@@ -124,7 +125,11 @@ ii = k' i' i'
 hh = k' h' h'
 
 ---------------- Matrix functions ----------------
--- k is a functions that tries to multiply by whatever it to its right
+-- Allows conversion from an arbitrary number of gates to a matrix, similar to putGate
+-- kList [x',i',i',i'] == putGate x' 4 1
+tensLs = foldr1 k'
+
+-- k is a functions that tries to multiply by whatever is to its right
 k a b = multStd $ k' a b
 
 -- The matrix or vector equivalent is k'
@@ -239,78 +244,34 @@ clean :: Matrix (Complex Double) -> Matrix (Complex Double)
 clean m =
   let
     errorToZero :: Complex Double -> Complex Double
-    errorToZero (a:+b)
-      | (abs a <= 1.0e-10) && (abs b <= 1.0e-10) = 0:+0
-      | abs b <= 1.0e-10 = a:+0.0
-      | abs a <= 1.0e-10 = 0.0:+b
-      | otherwise = a:+b
+    errorToZero (a:+b) = correct a:+correct b
+    correct a
+      | abs a <= 1.0e-10 = 0
+      | ((abs a) - (1/2)) <= 1.0e-10 = sign a * 1/2
+      | otherwise = a
+    sign a
+      | a >= 0 = 1
+      | otherwise = -1
   in
   matrix (nrows m) (ncols m) (\(i,j) -> errorToZero (m!(i,j)))
 
---from a3q3
--- this can be done with permMatrix n i j
-perm = multStd $ perm'
-perm' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
-                       0:+0,0:+0,0:+0,0:+0,1:+0,0:+0,
-                       0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
-                       0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
-                       0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
-                       0:+0,0:+0,0:+0,0:+0,0:+0,1:+0]
--- same thing
-permu' = permMatrix 6 2 5
+-- parity :: Bits a => [a] -> a
+-- parity = foldl1 xor
+parity :: [Int] -> Int
+parity =
+  let
+    xor a b = mod (a+b) 2
+  in
+   foldl xor 0
 
-miniPerm = multStd $ miniPerm'
-miniPerm' = fromList 6 6 [1:+0,0:+0,0:+0,0:+0,0:+0,0:+0,
-                          0:+0,0:+0,1:+0,0:+0,0:+0,0:+0,
-                          0:+0,1:+0,0:+0,0:+0,0:+0,0:+0,
-                          0:+0,0:+0,0:+0,1:+0,0:+0,0:+0,
-                          0:+0,0:+0,0:+0,0:+0,0:+0,1:+0,
-                          0:+0,0:+0,0:+0,0:+0,1:+0,0:+0]
+paritySum :: [Int] -> Int
+paritySum xs = mod (sum xs) 2
 
---a = perm $ k (f 2) (f 3) $ perm'
--- let a = perm $ k (f 2) (f 3) $ miniPerm $ perm'
---         a - (f 6)
+prop_parity xs = parity xs == paritySum xs
 
 
-q3p = miniPerm $ perm'
-q3q = perm'
 
--- P =
--- ( 1 0 0 0 0 0 )
--- ( 0 0 0 0 1 0 )
--- ( 0 0 1 0 0 0 )
--- ( 0 0 0 1 0 0 )
--- ( 0 1 0 0 0 0 )
--- ( 0 0 0 0 0 1 )
 
--- Q =
--- ( 1 0 0 0 0 0 )
--- ( 0 0 1 0 0 0 )
--- ( 0 0 0 0 1 0 )
--- ( 0 0 0 1 0 0 )
--- ( 0 0 0 0 0 1 )
--- ( 0 1 0 0 0 0 )
-
--- base 6 vectors
--- s0 = toKet 6 [1,0,0,0,0,0]
--- s1 = toKet 6 [0,1,0,0,0,0]
--- s2 = toKet 6 [0,0,1,0,0,0]
--- s3 = toKet 6 [0,0,0,1,0,0]
--- s4 = toKet 6 [0,0,0,0,1,0]
--- s5 = toKet 6 [0,0,0,0,0,1]
-
--- perm = multStd $ perm'
--- perm' = fromList 6 6 [1,0,0,0,0,0,
---                        0,0,0,0,1,0,
---                        0,0,1,0,0,0,
---                        0,0,0,1,0,0,
---                        0,1,0,0,0,0,
---                        0,0,0,0,0,1]
-
--- miniPerm = multStd $ miniPerm'
--- miniPerm' = fromList 6 6 [1,0,0,0,0,0,
---                           0,0,1,0,0,0,
---                           0,1,0,0,0,0,
---                           0,0,0,1,0,0,
---                           0,0,0,0,0,1,
---                           0,0,0,0,1,0]
+-- l0 = (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) + (tensLs [l,o,l,o])
+-- multStd (tensLs [u,u,u,u]) l0
+-- l1 = (tensLs [l,l,o,o]) + (tensLs [l,l,o,o]) + (tensLs [o,o,l,l]) + (tensLs [o,o,l,l]) - (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) - (tensLs [l,o,l,o])
