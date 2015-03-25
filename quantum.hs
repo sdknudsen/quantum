@@ -15,21 +15,21 @@ import Data.Complex
 import Numeric
 import qualified Test.QuickCheck as T
 
-o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Num a => Matrix a
-i,x,z,h,cnot,cz :: Num a => Matrix a -> Matrix a
-i',x',z',h',cz',cnot' :: Num a => Matrix a
--- o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: RealFloat a => Matrix a
--- i,x,z,h,cnot,cz :: RealFloat a => Matrix a -> Matrix a
--- i',x',z',h',cz',cnot' :: RealFloat a => Matrix a
+-- o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: Num a => Matrix a
+-- i,x,z,h,cnot,cz :: Num a => Matrix a -> Matrix a
+-- i',x',z',h',cz',cnot' :: Num a => Matrix a
+o,l,p,m,oo,ol,lo,ll,phip,psip,psim :: RealFloat a => Matrix a
+i,x,z,h,cnot,cz :: RealFloat a => Matrix a -> Matrix a
+i',x',z',h',cz',cnot' :: RealFloat a => Matrix a
 
 -- print x = putStr $ show x
 -- mult xs = foldr1 multStd xs
 
-normFactor :: Num a => a -> a
-normFactor = (*1)
+-- normFactor :: Num a => a -> a
+-- normFactor = (*1)
 -- Replace with the line below to normalize 2 qubit matrices and vectors
--- normFactor :: (RealFloat a) => a -> a
--- normFactor = (/sqrt 2)
+normFactor :: (RealFloat a) => a -> a
+normFactor = (/sqrt 2)
 
 toKet :: Int -> [a] -> Matrix a
 toKet x xs = fromList x 1 xs
@@ -132,6 +132,8 @@ tensLs = foldr1 k'
 -- k is a functions that tries to multiply by whatever is to its right
 k a b = multStd $ k' a b
 
+fromKet c ls = scaleMatrix c $ tensLs ls
+
 -- The matrix or vector equivalent is k'
 k' :: Num a => Matrix a -> Matrix a -> Matrix a
 k' a b =
@@ -158,7 +160,7 @@ c g' n x y = matrix (2^n) (2^n) (control g' n (n - x) y)
     -- If the control bit is on, get the entry for an identity matrix, otherwise treat it as a tensor product of with gate g at the y bit
     -- Takes a coordinate pairs and returns the matrix value at that coordinate
     --control :: RealFloat a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
-    control :: Num a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
+--    control :: Num a => Matrix a -> Int -> Int -> Int -> (Int,Int) -> a
     control g' n x y (i,j)
       | not (bitIsOne x i j) && i == j = 1
       | not (bitIsOne x i j) = 0
@@ -188,7 +190,7 @@ cs g' n xs y = matrix (2^n) (2^n) (control g' n xs y)
 -- Tensor product for n bits with a gate g' at position c (identity elsewhere)
 -- change to tail recursive?
 --putGate :: RealFloat a => Matrix a -> Int -> Int -> Matrix a
-putGate :: Num a => Matrix a -> Int -> Int -> Matrix a
+--putGate :: Num a => Matrix a -> Int -> Int -> Matrix a
 putGate g' n c
   | n < 1 = error "Second argument must be at least 1"
   | n == 1 = newGate
@@ -239,21 +241,37 @@ f :: RealFloat a => Int -> Matrix (Complex a)
 f n = matrix n n (\(j,k) -> exp (fromIntegral (2*(j-1)*(k-1)) * pi * (0:+1)/fromIntegral n))
 -- to normalize: (/sqrt n) $ 
 
--- cuts off rounding error (only for 0)
-clean :: Matrix (Complex Double) -> Matrix (Complex Double)
+-- Cuts off rounding error
 clean m =
   let
-    errorToZero :: Complex Double -> Complex Double
-    errorToZero (a:+b) = correct a:+correct b
+    errorToZero x = correct x --(float2Double x)
     correct a
-      | abs a <= 1.0e-10 = 0
-      | ((abs a) - (1/2)) <= 1.0e-10 = sign a * 1/2
+--      | abs (a - mod a 1) <= 1.0e-10 = mod a 1
+      | abs a < 1.0e-10 = 0
+      | abs((abs a) - (1/2)) < 1.0e-10 = sign a * 1/2
+      | abs((abs a) - (1/4)) < 1.0e-10 = sign a * 1/4
       | otherwise = a
     sign a
       | a >= 0 = 1
       | otherwise = -1
   in
   matrix (nrows m) (ncols m) (\(i,j) -> errorToZero (m!(i,j)))
+
+-- Clean for complex numbers, doens't work for most most numbers
+-- clean :: Matrix (Complex Double) -> Matrix (Complex Double)
+-- clean m =
+--   let
+--     errorToZero :: Complex Double -> Complex Double
+--     errorToZero (a:+b) = correct a:+correct b
+--     correct a
+--       | abs a <= 1.0e-10 = 0
+--       | abs((abs a) - (1/2)) <= 1.0e-10 = sign a * 1/2
+--       | otherwise = a
+--     sign a
+--       | a >= 0 = 1
+--       | otherwise = -1
+--   in
+--   matrix (nrows m) (ncols m) (\(i,j) -> errorToZero (m!(i,j)))
 
 -- parity :: Bits a => [a] -> a
 -- parity = foldl1 xor
@@ -271,7 +289,21 @@ prop_parity xs = parity xs == paritySum xs
 
 
 
+-- Q1
+l0 = (tensLs [o,o,o,o]) + (tensLs [o,o,l,l]) + (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
+l1 = (tensLs [o,o,o,o]) - (tensLs [o,o,l,l]) - (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
 
+-- Q3
 -- l0 = (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) + (tensLs [l,o,l,o])
 -- multStd (tensLs [u,u,u,u]) l0
 -- l1 = (tensLs [l,l,o,o]) + (tensLs [l,l,o,o]) + (tensLs [o,o,l,l]) + (tensLs [o,o,l,l]) - (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) - (tensLs [l,o,l,o])
+
+
+
+-- multStd (tensLs [h',h',h',h']) (fromKet 2 [l,l,o,o])
+-- multStd (tensLs [h',h',h',h']) (fromKet 2 [o,o,l,l])
+-- multStd (tensLs [h',h',h',h']) (fromKet (-1) [o,l,o,l])
+-- multStd (tensLs [h',h',h',h']) (fromKet (-1) [o,l,l,o])
+-- multStd (tensLs [h',h',h',h']) (fromKet (-1) [l,o,o,l])
+-- multStd (tensLs [h',h',h',h']) (fromKet (-1) [l,o,l,o])
+
