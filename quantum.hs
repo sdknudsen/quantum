@@ -2,9 +2,12 @@
 -- Description: Matrix multiplication for quantum circuits
 
 -- m' is a matrix, m is a function that applies m'
+-- examples for an arbitrary matrix m and vector v
+-- m.m.m $ v
+-- m $ m $ $ m v
+-- m .* m .* .* m .* v
 
 -- TODO
--- change floating point
 -- display vectors with constants factored out
 -- split into multiple files
 
@@ -36,6 +39,24 @@ toKet x xs = fromList x 1 xs
 toBra x xs = fromList 1 x xs
 t = transpose
 
+
+----------------------------------------------------------------
+-- Trying to make allow the user to simply type in "m m v" for matrices m and vector v
+-- mul :: (a -> a) -> (a -> a) -> (a -> a)
+-- mul a b = multStd a.b
+-- mul = multStd
+--infixr 9 `.*`
+infixr 1 .*
+--h1 = (.*) h'
+
+-- h1 m
+--   | ncols m == 1 = multStd h' m
+--   | otherwise = h.m
+
+(.*) :: Num a => Matrix a -> Matrix a -> Matrix a
+(.*) = multStd
+----------------------------------------------------------------
+
 -- Vectors
 o = toKet 2 [1,0]			-- |0>
 l = toKet 2 [0,1]			-- |1>
@@ -59,6 +80,8 @@ x' = fromList 2 2 [0,1,
 z = multStd $ z'
 z' = fromList 2 2 [1,0,
                   0,-1]
+
+--h = .* h'
 h = multStd $ h'
 h' = fromList 2 2 $ map normFactor [1,1,1,-1]
 
@@ -125,7 +148,7 @@ ii = k' i' i'
 hh = k' h' h'
 
 ---------------- Matrix functions ----------------
--- Allows conversion from an arbitrary number of gates to a matrix, similar to putGate
+-- Allows conversion from an arbitrary number of two-qubit gates to a matrix, similar to putGate
 -- kList [x',i',i',i'] == putGate x' 4 1
 tensLs = foldr1 k'
 
@@ -246,14 +269,20 @@ clean m =
   let
     errorToZero x = correct x --(float2Double x)
     correct a
---      | abs (a - mod a 1) <= 1.0e-10 = mod a 1
-      | abs a < 1.0e-10 = 0
+--      | abs a < 1.0e-10 = 0
+    -- Cut will be really slow for big numbers, but I don't know a better simple ways for doubles
+      | (snd $ intFloat a) < 1.0e-10 = sign a * (fst $ intFloat a)
       | abs((abs a) - (1/2)) < 1.0e-10 = sign a * 1/2
       | abs((abs a) - (1/4)) < 1.0e-10 = sign a * 1/4
       | otherwise = a
     sign a
       | a >= 0 = 1
       | otherwise = -1
+    -- cuts a number into its integer and floating parts
+    cut n f
+      | f < 0.5 = (n,f)
+      | otherwise = cut (n+1) (f-1)
+    intFloat a = cut 0 (abs a)
   in
   matrix (nrows m) (ncols m) (\(i,j) -> errorToZero (m!(i,j)))
 
@@ -290,15 +319,14 @@ prop_parity xs = parity xs == paritySum xs
 
 
 -- Q1
-l0 = (tensLs [o,o,o,o]) + (tensLs [o,o,l,l]) + (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
-l1 = (tensLs [o,o,o,o]) - (tensLs [o,o,l,l]) - (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
+oL = (tensLs [o,o,o,o]) + (tensLs [o,o,l,l]) + (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
+lL = (tensLs [o,o,o,o]) - (tensLs [o,o,l,l]) - (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
+oN = (tensLs [i',z',i',i']) .* oL
 
 -- Q3
--- l0 = (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) + (tensLs [l,o,l,o])
--- multStd (tensLs [u,u,u,u]) l0
--- l1 = (tensLs [l,l,o,o]) + (tensLs [l,l,o,o]) + (tensLs [o,o,l,l]) + (tensLs [o,o,l,l]) - (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) - (tensLs [l,o,l,o])
-
-
+l0 = (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) + (tensLs [l,o,l,o])
+--multStd (tensLs [u,u,u,u]) l0
+l1 = (tensLs [l,l,o,o]) + (tensLs [l,l,o,o]) + (tensLs [o,o,l,l]) + (tensLs [o,o,l,l]) - (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) - (tensLs [l,o,l,o])
 
 -- multStd (tensLs [h',h',h',h']) (fromKet 2 [l,l,o,o])
 -- multStd (tensLs [h',h',h',h']) (fromKet 2 [o,o,l,l])
@@ -307,3 +335,12 @@ l1 = (tensLs [o,o,o,o]) - (tensLs [o,o,l,l]) - (tensLs [l,l,o,o]) + (tensLs [l,l
 -- multStd (tensLs [h',h',h',h']) (fromKet (-1) [l,o,o,l])
 -- multStd (tensLs [h',h',h',h']) (fromKet (-1) [l,o,l,o])
 
+aM = multStd aM'
+bM = multStd $ bM'
+cM = multStd $ cM'
+g' = fromList 3 3 [1,3,5,0,1,7,0,0,1]
+g1' = fromList 3 3 [1,3,0,0,1,7,0,0,1]
+aM' = fromList 3 3 [1,3,0,0,1,0,0,0,1]
+a1M' = fromList 3 3 [1,-3,0,0,1,0,0,0,1]
+bM' = fromList 3 3 [1,0,5,0,1,0,0,0,1]
+cM' = fromList 3 3 [1,0,0,0,1,7,0,0,1]
