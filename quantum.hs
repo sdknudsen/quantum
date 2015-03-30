@@ -267,7 +267,7 @@ f n = matrix n n (\(j,k) -> exp (fromIntegral (2*(j-1)*(k-1)) * pi * (0:+1)/from
 -- Cuts off rounding error
 clean m =
   let
-    errorToZero x = correct x --(float2Double x)
+    errorToZero x = correct x
     correct a
 --      | abs a < 1.0e-10 = 0
     -- Cut will be really slow for big numbers, but I don't know a better simple ways for doubles
@@ -315,32 +315,3 @@ paritySum :: [Int] -> Int
 paritySum xs = mod (sum xs) 2
 
 prop_parity xs = parity xs == paritySum xs
-
-
-
--- Q1
-oL = (tensLs [o,o,o,o]) + (tensLs [o,o,l,l]) + (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
-lL = (tensLs [o,o,o,o]) - (tensLs [o,o,l,l]) - (tensLs [l,l,o,o]) + (tensLs [l,l,l,l])
-oN = (tensLs [i',z',i',i']) .* oL
-
--- Q3
-l0 = (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) + (tensLs [l,o,l,o])
---multStd (tensLs [u,u,u,u]) l0
-l1 = (tensLs [l,l,o,o]) + (tensLs [l,l,o,o]) + (tensLs [o,o,l,l]) + (tensLs [o,o,l,l]) - (tensLs [o,l,o,l]) - (tensLs [o,l,l,o]) - (tensLs [l,o,o,l]) - (tensLs [l,o,l,o])
-
--- multStd (tensLs [h',h',h',h']) (fromKet 2 [l,l,o,o])
--- multStd (tensLs [h',h',h',h']) (fromKet 2 [o,o,l,l])
--- multStd (tensLs [h',h',h',h']) (fromKet (-1) [o,l,o,l])
--- multStd (tensLs [h',h',h',h']) (fromKet (-1) [o,l,l,o])
--- multStd (tensLs [h',h',h',h']) (fromKet (-1) [l,o,o,l])
--- multStd (tensLs [h',h',h',h']) (fromKet (-1) [l,o,l,o])
-
-aM = multStd aM'
-bM = multStd $ bM'
-cM = multStd $ cM'
-g' = fromList 3 3 [1,3,5,0,1,7,0,0,1]
-g1' = fromList 3 3 [1,3,0,0,1,7,0,0,1]
-aM' = fromList 3 3 [1,3,0,0,1,0,0,0,1]
-a1M' = fromList 3 3 [1,-3,0,0,1,0,0,0,1]
-bM' = fromList 3 3 [1,0,5,0,1,0,0,0,1]
-cM' = fromList 3 3 [1,0,0,0,1,7,0,0,1]
